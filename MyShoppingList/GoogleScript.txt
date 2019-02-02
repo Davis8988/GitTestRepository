@@ -1,7 +1,9 @@
 function doGet(e){
+  var sheetURL = "https://docs.google.com/spreadsheets/d/1BwSUbhDi-FlDj34Jbmx32kZRAD2i_C5Q2cT4x5fCLGY/edit#gid=0";
+  var sheetName = "ItemsList";
   var op = e.parameter.action;
-  var ss=SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1BwSUbhDi-FlDj34Jbmx32kZRAD2i_C5Q2cT4x5fCLGY/edit#gid=0");
-  var sheet = ss.getSheetByName("ItemsList");
+  var ss=SpreadsheetApp.openByUrl(sheetURL);
+  var sheet = ss.getSheetByName(sheetName);
   
   if(op == null || ss == null || sheet == null) {return null; }
   
