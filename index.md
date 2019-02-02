@@ -1,4 +1,4 @@
-## Welcome to GitHub Pages
+## Davis's GoogleScript Page
 
 You can use the [editor on GitHub](https://github.com/Davis8988/GoogleScripts/edit/master/index.md) to maintain and preview the content for your website in Markdown files.
 
