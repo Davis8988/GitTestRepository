@@ -1,0 +1,187 @@
+function doGet(e){
+  var op = e.parameter.action;
+  var ss=SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1BwSUbhDi-FlDj34Jbmx32kZRAD2i_C5Q2cT4x5fCLGY/edit#gid=0");
+  var sheet = ss.getSheetByName("ItemsList");
+  
+  if(op == null || ss == null || sheet == null) {return null; }
+  
+  op = op.toString().trim().toLowerCase();
+  
+  if(op=="insert")
+    return insert_value(e,sheet);
+  else if(op=="read")
+    return read_data(e,sheet);
+}
+
+function insert_value(request,sheet){
+   var itemName = request.parameter.itemName;
+   var itemQuantity = request.parameter.itemQuantity;
+   var itemPrice = request.parameter.itemPrice;
+  
+   var flag=1;
+   var lr= sheet.getLastRow();
+   for(var i=1;i<=lr;i++){
+      var curItemName = sheet.getRange(i, 3).getValue();
+      if(curItemName==itemName){
+        flag=0;
+        var result="Item already exist..";
+      } 
+   }
+  
+   if(flag==1){
+     var d = new Date();
+     var currentTime = d.toLocaleString();
+     var rowData = sheet.appendRow([itemName,itemQuantity,itemPrice,currentTime]);  
+     var result="Insertion successful";
+   }
+  
+   result = JSON.stringify({
+     "result": result
+   });  
+    
+   return ContentService
+  .createTextOutput(request.parameter.callback + "(" + result + ")")
+  .setMimeType(ContentService.MimeType.JAVASCRIPT);   
+  
+}
+
+
+function read_data(request,sheet){
+  console.info('got in read_data function2');
+  try {
+    var columnsNamesToRead = request.parameters.columnsToRead
+    if(columnsNamesToRead == null) {return null}
+    
+    // Must convert parameter to string via toString() to be able to use split() to get values as array
+    columnsNamesToRead = columnsNamesToRead.toString().trim().split(",");
+    console.info('for looping on: '+columnsNamesToRead);
+    
+    // Special Case - wants to read all column's data
+    if(columnsNamesToRead = 'all') {
+      columnsNamesToRead = getAllColumnNames_lowerCase(sheet);
+    }
+    
+    // Data to be returned:
+    var dataArray = getColumnsDataArray(sheet , columnsNamesToRead);
+    
+    // Json data to be returned:
+    var json = {};
+    
+    json.data = dataArray;
+    console.info('\nResultJson: '+json+'\n\n');
+    
+    var resultJson = JSON.stringify(json);
+    
+    console.info('Finished... String JSON: '+resultJson);
+    
+    return ContentService
+      .createTextOutput(request.parameter.callback + "(" + resultJson + ")")
+      .setMimeType(ContentService.MimeType.JAVASCRIPT); 
+    
+  } catch (e) {
+    // Log an ERROR message.
+    console.error('read_data(request,sheet) yielded an error: ' + e);
+  }
+}
+
+function getColumnsDataArray(sheet , columnsNamesToRead) {
+  // Result array to be returned
+  var dataArray = {};
+    
+  for(var i = 0; i < columnsNamesToRead.length; i++) {
+    console.info('column'+i+': '+columnsNamesToRead[i]);
+    var columnData = getDataArrayOfOneColummn(sheet,columnsNamesToRead[i]);
+    var colName = columnsNamesToRead[i];
+    console.info('Got data of colummn '+colName + '\nData: '+columnData);
+    
+    dataArray[colName] = columnData;
+  }
+  
+  return dataArray;
+}
+
+function getDataArrayOfOneColummn(sheet,columnName) {
+  const COLUMN_NOT_FOUND = -1;
+  
+  // Get the column number using a "Range Name" for that column that was defined earlier in the google sheet 
+  var colNumber = getColumnNumberByColumnName(sheet , columnName);
+  if(colNumber == COLUMN_NOT_FOUND) {return null}
+  
+  
+  console.info('Getting data of column: '+columnName+', no. '+colNumber);
+  
+  // Getting the rows from 2nd Row , 1st column to last row and last column
+  var startingRow = 2;
+  var startingCol = colNumber;
+  var numOfRows = sheet.getLastRow()-1;
+  
+  var colValues = sheet.getRange(startingRow,startingCol,numOfRows).getValues();
+  
+  console.info('Values: '+colValues+'\n');
+  
+  return colValues;
+}
+
+function getAllColumnNames_lowerCase(sheet) {
+  // Get data of first row (where column names should be)
+  var firstRow = 1;
+  var firstCol = 1;
+  var untilRow = firstRow;
+  var untilCol = sheet.getLastColumn();
+  
+  var firstRowRange = sheet.getRange(firstRow,firstCol,untilRow, untilCol);
+  var firstRowDataTDArray = firstRowRange.getValues();
+  
+  var allColumnNames = [];
+  
+  for(var i = 0; i < firstRowDataTDArray[0].length; i++) {
+    var columnName = firstRowDataTDArray[0][i].toString().trim().toLowerCase();
+    allColumnNames.push(columnName);
+  }
+  return allColumnNames;
+}
+
+
+function getColumnNumberByColumnName(sheet , columnNameToSearch) {
+   // Get the column number using a "Range Name" for that column that was defined earlier in the google sheet 
+  const COLUMN_NOT_FOUND = -1;
+  
+  try {
+    var colNumber = sheet.getRange(columnNameToSearch).getColumn();
+    
+  } catch(e) {
+    // incasesensitive search: /stringToSearch/i
+    if(e.message.search(/Range not found/i) == -1) {
+      // If the error occured because of something other than 'Range not found' - throw it again:
+      throw new Error(e);
+    }
+    colNumber = COLUMN_NOT_FOUND;
+  }
+  
+  // If found the column using 'getRange' method:
+  if(colNumber != COLUMN_NOT_FOUND) { 
+    return colNumber;
+    
+  } 
+  else {
+    console.info('\nCouldn`t find column: '+columnNameToSearch+' using `range` method. Attempting to find it in all columns names of first row of sheet: '+sheet.getSheetName()+'\n');
+    
+    var allColumnNames = getAllColumnNames_lowerCase(sheet);
+    
+    console.info('\nValues: '+firstRowDataTDArray);
+    columnNameToSearch = columnNameToSearch.trim().toLowerCase();
+    
+    for(var i = 0; i < allColumnNames.length; i++) {
+      if(columnNameToSearch == allColumnNames[i]) {
+        // Found the column - return it's index
+        return i;
+      } 
+    }
+    
+    console.info('\nColumn: '+columnNameToSearch +' doesn`t exist in the first row of sheet: '+sheet.getSheetName());
+    
+  }
+  
+  return COLUMN_NOT_FOUND;
+  
+}

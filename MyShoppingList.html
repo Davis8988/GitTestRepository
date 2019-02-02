@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+  <head>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Shopping List</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  </head>
+  <body>
+  
+    <h1>My Shopping List</h1>
+	<br>
+	<div id="data" >
+      <div class="input-form">
+        <div style="text-align: center;">
+          <p>Enter Your Item:</p>
+        </div>
+        <form id="shoppingListForm" action="javascript:insert_value()" >
+		  <label for="itName">Item:</label><br>
+	      <input type="Text" id="itName" name="ItemName" placeholder="Your Item Name..." style="width:textFieldWidth" required><br>
+	    
+		  <label for="itQuantity">Quantity:</label><br>
+	      <input type="Number" id="itQuantity" name="ItemQuantity" placeholder="How Many?" style="width:textFieldWidth" required><br>
+	    
+	      <label for="itPrice">Price in &#x20aa;:</label><br>
+	      <input type="Number" id="itPrice" name="ItemPrice" placeholder="10 &#x20aa;" style="width:textFieldWidth" required step="any"><br>
+	    
+	      <br>
+          <div class="submit-button">
+            <input type="submit" value="Submit">
+          </div>
+        </form>
+      </div>
+	</div>
+    
+    <br>
+    
+    <div id="currentList" class="current-list">
+      <div>
+		<form id="showCurrentListForm" action="javascript:readData()" >
+		  <input id="showCurrentListBtn" type="submit" value="Show List">
+		</form>
+      </div>
+      <br>
+      <div >
+        <table id="listTable" class="current-list-table">
+	      <thead>
+	      </thead>
+          <tbody>
+	      </tbody>
+	    </table>
+      </div>
+      
+    </div>
+    
+  </body>
+</html>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzmswK3jizZzwrYVhvo69P8cTA8qB1fL3pmqTUdc2-1po2YRklp/exec";
+  
+  function googleSheetRequestAPI(crossDomain , requestString , method , dataType) {
+	var callbackFunc = "?callback=requestResult";
+	var url = SCRIPT_URL + callbackFunc + requestString;
+	var request = jQuery.ajax({
+		crossDomain: crossDomain,
+		url: url,
+		method: method,
+		dataType: dataType
+    });
+  }
+  
+  function insert_value() {
+	var action = 'insert';
+	var itemNameVal = $("#itName").val();
+	var itemQuantityVal = $("#itQuantity").val();
+	var itemPriceVal = $("#itPrice").val();
+	
+	if(itemNameVal && itemQuantityVal && itemPriceVal)
+	{
+	  var crossDomain = true;
+	  var method = "GET";
+	  var dataType = "jsonp";
+	  
+	  var requestString =  "&itemName=" + itemNameVal + 
+						   "&itemQuantity=" + itemQuantityVal + 
+						   "&itemPrice=" + itemPriceVal + 
+						   "&action=" + action;
+	  
+	  googleSheetRequestAPI(crossDomain , requestString, method, dataType);
+	  document.getElementById("shoppingListForm").reset();
+	}
+	else
+	{
+	  alert('All fields must be completed1.');
+	}
+	
+  }
+  
+  function readData() {
+	alert('Reading Data...');
+	var crossDomain = true;
+    var method = "GET";
+    var dataType = "jsonp";
+	//var columnToRead = "all";
+	var columnToRead = "ItemName,ItemQuantity,ItemPrice,TimeStamp";
+	var action = "read";
+	
+	var requestString = "&columnsToRead=" + columnToRead +
+						"&action=" + action;
+						
+						
+	googleSheetRequestAPI(crossDomain , requestString , method , dataType);
+  }
+  
+  
+  function requestResult(returnedResult) {
+	var moreInfo = "";
+	if(returnedResult.data != null)
+	  moreInfo = returnedResult.data;
+	alert(returnedResult.toString()+'\n'+moreInfo);
+  }
+  
+  
+  function showCurrentList() {
+	toggleShowCurrentListBtnText();
+	//var listTable = document.getElementById('listTable');
+	
+	repopulateListTable(listTable);
+  }
+  
+  
+  
+  function toggleShowCurrentListBtnText() {
+    var showCurrentListBtn = $("#showCurrentListBtn");
+    var currentShowListButtonText = showCurrentListBtn.val();
+	var newShowListButtonText = 'Show List';
+	if(currentShowListButtonText == 'Show List') {
+	  newShowListButtonText = 'Hide List';
+	}
+	alert('Current Text = '+currentShowListButtonText +'\nChanging to: '+newShowListButtonText);
+	showCurrentListBtn.val(newShowListButtonText);
+	
+  }
+  
+  
+  function repopulateListTable() {
+    var listTable = $("#listTable");
+	populateHeaderRows(listTable);
+	//populateDataRows(listTable);
+	
+	//listTable.find('thead').append("<tr><th>head1</th><th>head2</th><th>head3</th></tr>");
+	
+  }
+  
+  function populateHeaderRows(table) {
+	var tableHeader = table.find('thead');
+	var headerRowsCount = tableHeader.children().length;	
+	
+	// No Headers:
+	if (headerRowsCount == 0) {
+	  var newHeaderRow = "<tr> <th> Head1 </th> <th> Head2 </th> <th> Head3 </th> </tr>";
+	  tableHeader.append(newHeaderRow);
+	}
+	
+  }
+  
+  function fillRowsOfTable(table){
+	
+	table.find('thead').append("<tr><th>head1</th><th>head2</th><th>head3</th></tr>");
+    var rowsCount = table.rows.length;
+	//alert('Rows Count = '+rowsCount);
+  }
+	
+</script>
+
+<style>
+   body {
+     background-color: LightSeaGreen;
+     text-align: center;
+  }
+  
+  
+  .input-form {
+    text-align: left;
+    display: inline-block;
+    background-color: LightBlue;
+    border: 12px solid LightBlue;
+  }
+  
+  .submit-button{
+    text-align: center;
+  }
+  
+  .current-list{
+    display: inline-block;
+    text-align: left;
+    border: 1px solid;
+    width: 50%;
+  }
+  
+  .current-list-table {
+    width: 100%;
+    border: 1px solid black;
+    text-align: left;
+    background-color: #f1f1c1;
+  }
+  
+</style>
