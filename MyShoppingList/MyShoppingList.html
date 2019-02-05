@@ -58,9 +58,9 @@
 <script>
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzmswK3jizZzwrYVhvo69P8cTA8qB1fL3pmqTUdc2-1po2YRklp/exec";
   
-  function googleSheetRequestAPI(crossDomain , requestString , method , dataType) {
-	var callbackFunc = "?callback=requestResult";
-	var url = SCRIPT_URL + callbackFunc + requestString;
+  function googleSheetRequestAPI(crossDomain , requestString , method , dataType , callbackFunc) {
+	var callbackStr = "?callback="+callbackFunc;
+	var url = SCRIPT_URL + callbackStr + requestString;
 	var request = jQuery.ajax({
 		crossDomain: crossDomain,
 		url: url,
@@ -80,13 +80,14 @@
 	  var crossDomain = true;
 	  var method = "GET";
 	  var dataType = "jsonp";
+	  var callbackFunc = "insertCallBack";
 	  
 	  var requestString =  "&itemName=" + itemNameVal + 
 						   "&itemQuantity=" + itemQuantityVal + 
 						   "&itemPrice=" + itemPriceVal + 
 						   "&action=" + action;
 	  
-	  googleSheetRequestAPI(crossDomain , requestString, method, dataType);
+	  googleSheetRequestAPI(crossDomain , requestString, method, dataType , callbackFunc);
 	  document.getElementById("shoppingListForm").reset();
 	}
 	else
@@ -104,28 +105,32 @@
 	//var columnToRead = "all";
 	var columnToRead = "ItemName,ItemQuantity,ItemPrice,TimeStamp";
 	var action = "read";
+	var callbackFunc = "readCallBack";
 	
 	var requestString = "&columnsToRead=" + columnToRead +
 						"&action=" + action;
 						
 						
-	googleSheetRequestAPI(crossDomain , requestString , method , dataType);
+	googleSheetRequestAPI(crossDomain , requestString , method , dataType , callbackFunc);
   }
   
   
-  function requestResult(returnedResult) {
-	var moreInfo = "";
-	if(returnedResult.data != null)
-	  moreInfo = returnedResult.data;
-	alert(returnedResult.toString()+'\n'+moreInfo);
+  function insertCallBack(returnedInsertResult) {
+	alert(returnedInsertResult);
+  }
+  
+  function readCallBack(returnedReadResult) {
+	if(returnedReadResult.ItemName !== null) {
+		repopulateListTable(returnedReadResult);
+	} else {
+		alert("Returned readCallBack parameter is null");
+	}
   }
   
   
   function showCurrentList() {
 	toggleShowCurrentListBtnText();
-	//var listTable = document.getElementById('listTable');
 	
-	repopulateListTable(listTable);
   }
   
   
@@ -143,24 +148,37 @@
   }
   
   
-  function repopulateListTable() {
+  function repopulateListTable(returnedReadResult) {
     var listTable = $("#listTable");
-	populateHeaderRows(listTable);
+	var headers = returnedReadResult.columnNames
+	populateHeaderRows(listTable,headers);
 	//populateDataRows(listTable);
 	
 	//listTable.find('thead').append("<tr><th>head1</th><th>head2</th><th>head3</th></tr>");
 	
   }
   
-  function populateHeaderRows(table) {
+  function populateHeaderRows(table,headers) {
 	var tableHeader = table.find('thead');
+	
 	var headerRowsCount = tableHeader.children().length;	
 	
-	// No Headers:
-	if (headerRowsCount == 0) {
-	  var newHeaderRow = "<tr> <th> Head1 </th> <th> Head2 </th> <th> Head3 </th> </tr>";
-	  tableHeader.append(newHeaderRow);
+	var new_head = document.createElement('thead');
+	var newHeaderRow = document.createElement('tr');
+	for(var i = 0 ; i < headers.length; i++) {
+		var headerRowElement = document.createElement('th');
+		headerRowElement.innerHTML = headers[i].toString();
+		newHeaderRow.appendChild(headerRowElement);
 	}
+	
+	new_head.appendChild(newHeaderRow);
+	tableHeader[0].parentNode.replaceChild(new_head , tableHeader[0]);
+	// No Headers:
+	//if (headerRowsCount == 0) {
+	//  var newHeaderRow = "<tr> <th> Head1 </th> <th> Head2 </th> <th> Head3 </th> </tr>";
+	//  tableHeader.append(newHeaderRow);
+	//}
+	alert("fin");
 	
   }
   
