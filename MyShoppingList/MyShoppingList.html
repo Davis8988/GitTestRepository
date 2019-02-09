@@ -21,8 +21,8 @@
 		  <label for="itQuantity">Quantity:</label><br>
 	      <input type="Number" id="itQuantity" name="ItemQuantity" placeholder="How Many?" style="width:textFieldWidth" required><br>
 	    
-	      <label for="itPrice">Price in &#x20aa;:</label><br>
-	      <input type="Number" id="itPrice" name="ItemPrice" placeholder="10 &#x20aa;" style="width:textFieldWidth" required step="any"><br>
+	      <label for="itPrice">Price in &#36;:</label><br>
+	      <input type="Number" id="itPrice" name="ItemPrice" placeholder="10 &#36;" style="width:textFieldWidth" required step="any"><br>
 	    
 	      <br>
           <div class="submit-button">
@@ -82,10 +82,10 @@
 	  var dataType = "jsonp";
 	  var callbackFunc = "insertCallBack";
 	  
-	  var requestString =  "&itemName=" + itemNameVal + 
-						   "&itemQuantity=" + itemQuantityVal + 
-						   "&itemPrice=" + itemPriceVal + 
-						   "&action=" + action;
+	  var requestString =  "&ItemName=" + itemNameVal + 
+						   "&ItemQuantity=" + itemQuantityVal + 
+						   "&ItemPrice=" + itemPriceVal + 
+						   "&Action=" + action;
 	  
 	  googleSheetRequestAPI(crossDomain , requestString, method, dataType , callbackFunc);
 	  document.getElementById("shoppingListForm").reset();
@@ -108,7 +108,7 @@
 	var callbackFunc = "readCallBack";
 	
 	var requestString = "&columnsToRead=" + columnToRead +
-						"&action=" + action;
+						"&Action=" + action;
 						
 						
 	googleSheetRequestAPI(crossDomain , requestString , method , dataType , callbackFunc);
@@ -116,14 +116,19 @@
   
   
   function insertCallBack(returnedInsertResult) {
-	alert(returnedInsertResult);
+	var insertResult = returnedInsertResult.insertResult
+	if(insertResult == false) {alert("Failed:\n"+returnedInsertResult.moreInfo) }
+	else {
+		alert("Success:\n"+returnedInsertResult.moreInfo);
+	}
+	
   }
   
   function readCallBack(returnedReadResult) {
 	if(returnedReadResult.ItemName !== null) {
 		repopulateListTable(returnedReadResult);
 	} else {
-		alert("Returned readCallBack parameter is null");
+		alert("Error - Returned readCallBack parameter is null");
 	}
   }
   
@@ -149,45 +154,106 @@
   
   
   function repopulateListTable(returnedReadResult) {
+	var validateResult = validateReturnedResults(returnedReadResult);
+	if(validateResult[0] == false) { 
+		alert(validateResult[1]);
+		return
+	}
     var listTable = $("#listTable");
 	var headers = returnedReadResult.columnNames
 	populateHeaderRows(listTable,headers);
-	//populateDataRows(listTable);
 	
-	//listTable.find('thead').append("<tr><th>head1</th><th>head2</th><th>head3</th></tr>");
+	populateDataRows(listTable , returnedReadResult);
 	
+	
+	
+  }
+  
+  function validateReturnedResults(returnedReadResult) {
+	if((returnedReadResult.columnNames) == null) {return [false , "Results.columnNames property is null"]}
+	if((returnedReadResult.data) == null) {return [false , "Results.data property is null"]}
+	var columnCount = returnedReadResult.columnNames.length
+	if(columnCount == 0) {return [false , "Results.columnNames property is of count 0 (contains no column names)"]}
+	
+	var dataLength = countInObject(returnedReadResult.data)
+	if(columnCount != dataLength) {return [false , "Results.columnNames and Results.Data properties are of different lengths"]}
+	
+	var firstColumnName = returnedReadResult.columnNames[0]
+	var firstColumnLength = returnedReadResult.data[`${firstColumnName}`].length
+	// Checking all columns are of the same length:
+	for(var i = 1; i < returnedReadResult.columnNames.length; i++) {
+		var curColumnName = returnedReadResult.columnNames[i]
+		var curColumnLength = returnedReadResult.data[`${curColumnName}`].length
+		
+		if(firstColumnLength != curColumnLength) {
+			return [false , "Results.columnNames property contains columns (0 and "+`${i}`+") " +
+				"of different lengths ("+`${firstColumnLength}` +","+`${curColumnLength}`+")"]
+		}		
+	}
+	
+	// All Good
+	return [true , "Returned results are ok"]
   }
   
   function populateHeaderRows(table,headers) {
-	var tableHeader = table.find('thead');
+	var tableHeader = table.find('thead');	
 	
-	var headerRowsCount = tableHeader.children().length;	
+	var newHead = document.createElement('thead');
+	var newRowElement = document.createElement('tr');
 	
-	var new_head = document.createElement('thead');
-	var newHeaderRow = document.createElement('tr');
+	// Create <th> element for every column name
 	for(var i = 0 ; i < headers.length; i++) {
 		var headerRowElement = document.createElement('th');
 		headerRowElement.innerHTML = headers[i].toString();
-		newHeaderRow.appendChild(headerRowElement);
+		newRowElement.appendChild(headerRowElement);
 	}
 	
-	new_head.appendChild(newHeaderRow);
-	tableHeader[0].parentNode.replaceChild(new_head , tableHeader[0]);
-	// No Headers:
-	//if (headerRowsCount == 0) {
-	//  var newHeaderRow = "<tr> <th> Head1 </th> <th> Head2 </th> <th> Head3 </th> </tr>";
-	//  tableHeader.append(newHeaderRow);
-	//}
-	alert("fin");
+	newHead.appendChild(newRowElement);
+	tableHeader[0].parentNode.replaceChild(newHead , tableHeader[0]);
+	
 	
   }
   
-  function fillRowsOfTable(table){
+  function populateDataRows(table , returnedReadResult) {
+	var data = returnedReadResult.data
+	var columnNames = returnedReadResult.columnNames
+	// Get length of first column - all columns should be the same length anyway
+	var columnsLength = data[`${columnNames[0]}`].length
 	
-	table.find('thead').append("<tr><th>head1</th><th>head2</th><th>head3</th></tr>");
-    var rowsCount = table.rows.length;
-	//alert('Rows Count = '+rowsCount);
+	var oldBody = table.find('tbody');
+	var newBody = document.createElement('tbody');
+	
+	for(var index = 0 ; index < columnsLength; index++) {
+		var newBodyRowElement = createNewDataRowFromIndex(index , columnNames , data);
+		newBody.appendChild(newBodyRowElement);
+	}
+	
+	oldBody[0].parentNode.replaceChild(newBody , oldBody[0]);
+	
   }
+  
+  function createNewDataRowFromIndex(index , columnNames , data) {
+	var newRowElement = document.createElement('tr');
+	for(var j = 0 ; j < columnNames.length; j++) {
+		var newDataElement = document.createElement('td');
+		var curColumnName = columnNames[j]
+		var dataValue = data[`${curColumnName}`][index]
+		
+		newDataElement.innerHTML = dataValue.toString()
+		newRowElement.appendChild(newDataElement)
+	}
+	
+	return newRowElement;
+  }
+  
+  function countInObject(obj) {
+    var count = 0;
+    // iterate over properties, increment if a non-prototype property
+    for(var key in obj) if(obj.hasOwnProperty(key)) count++;
+    return count;
+  }
+  
+  
 	
 </script>
 
@@ -218,9 +284,12 @@
   
   .current-list-table {
     width: 100%;
-    border: 1px solid black;
+    border: 2px solid black;
     text-align: left;
     background-color: #f1f1c1;
   }
   
+  th , td {
+	border: 1px solid black;
+  }
 </style>
