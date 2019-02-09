@@ -19,3 +19,16 @@ Composed of HTML, CSS, Javascript(jquery).
 9. Edit all other components of the HTML and Javascript code to match your desired page and ID names.
 10. Run the page & Enjoy...
 
+## Pictures
+
+First Look:
+[[https://github.com/Davis8988/GoogleScripts/blob/master/MyShoppingList/Pics/Form1.JPG]]
+
+Sheet:
+[[https://github.com/Davis8988/GoogleScripts/blob/master/MyShoppingList/Pics/Sheet.JPG]]
+
+Show List Button-Click
+[[https://github.com/Davis8988/GoogleScripts/blob/master/MyShoppingList/Pics/ShowCurrentList_Btn.JPG]]
+
+Show List Result
+[[https://github.com/Davis8988/GoogleScripts/blob/master/MyShoppingList/Pics/ShowCurrentList_List.JPG]]
