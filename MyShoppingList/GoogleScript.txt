@@ -1,9 +1,7 @@
 function doGet(e){
-  var sheetURL = "https://docs.google.com/spreadsheets/d/1BwSUbhDi-FlDj34Jbmx32kZRAD2i_C5Q2cT4x5fCLGY/edit#gid=0";
-  var sheetName = "ItemsList";
-  var op = e.parameter.action;
-  var ss=SpreadsheetApp.openByUrl(sheetURL);
-  var sheet = ss.getSheetByName(sheetName);
+  var op = e.parameter.Action;
+  var ss=SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1BwSUbhDi-FlDj34Jbmx32kZRAD2i_C5Q2cT4x5fCLGY/edit#gid=0");
+  var sheet = ss.getSheetByName("ItemsList");
   
   if(op == null || ss == null || sheet == null) {return null; }
   
@@ -15,34 +13,45 @@ function doGet(e){
     return read_data(e,sheet);
 }
 
+// Insert values are fixed and must contain: ItemName, ItemQuantity, ItemPrice
 function insert_value(request,sheet){
-   var itemName = request.parameter.itemName;
-   var itemQuantity = request.parameter.itemQuantity;
-   var itemPrice = request.parameter.itemPrice;
+  var itemName = request.parameter.ItemName;
+  var itemQuantity = request.parameter.ItemQuantity;
+  var itemPrice = request.parameter.ItemPrice;
+   
+  // for return response:
+  var requestParams = {
+    "ItemName" : itemName,
+    "ItemQuantity" : itemQuantity,
+    "ItemPrice" : itemPrice
+  }
   
-   var flag=1;
-   var lr= sheet.getLastRow();
-   for(var i=1;i<=lr;i++){
-      var curItemName = sheet.getRange(i, 3).getValue();
-      if(curItemName==itemName){
-        flag=0;
-        var result="Item already exist..";
-      } 
-   }
   
-   if(flag==1){
-     var d = new Date();
-     var currentTime = d.toLocaleString();
-     var rowData = sheet.appendRow([itemName,itemQuantity,itemPrice,currentTime]);  
-     var result="Insertion successful";
-   }
-  
-   result = JSON.stringify({
-     "result": result
-   });  
+  var itemAlreadyExists=false;
+  var lastRow= sheet.getLastRow();
+  for(var i=1; i <= lastRow; i++){
+     var curItemName = sheet.getRange(i, 1).getValue();
+     if(curItemName==itemName){
+       itemAlreadyExists=true;
+       var result= [false , "Item already exist.." , requestParams];
+     } 
+  }
+ 
+  if(itemAlreadyExists==false){
+    var nowDate = new Date();
+    var currentTime = nowDate.toLocaleString();
+    var rowData = sheet.appendRow([itemName,itemQuantity,itemPrice,currentTime]);  
+    var result=[true , "Insertion Successful" , requestParams];
+  }
+ 
+  var insertResult = JSON.stringify({
+    "insertResult": result[0],
+    "moreInfo": result[1],
+    "requestParams": result[2]
+  });  
     
-   return ContentService
-  .createTextOutput(request.parameter.callback + "(" + result + ")")
+  return ContentService
+  .createTextOutput(request.parameter.callback + "(" + insertResult + ")")
   .setMimeType(ContentService.MimeType.JAVASCRIPT);   
   
 }
@@ -58,9 +67,10 @@ function read_data(request,sheet){
     columnsNamesToRead = columnsNamesToRead.toString().trim().split(",");
     console.info('for looping on: '+columnsNamesToRead);
     
+    
     // Special Case - wants to read all column's data
-    if(columnsNamesToRead = 'all') {
-      columnsNamesToRead = getAllColumnNames_lowerCase(sheet);
+    if(columnsNamesToRead == 'all') {
+      columnsNamesToRead = getAllColumnNames(sheet);
     }
     
     // Data to be returned:
@@ -70,6 +80,7 @@ function read_data(request,sheet){
     var json = {};
     
     json.data = dataArray;
+    json.columnNames = columnsNamesToRead;
     console.info('\nResultJson: '+json+'\n\n');
     
     var resultJson = JSON.stringify(json);
@@ -124,7 +135,7 @@ function getDataArrayOfOneColummn(sheet,columnName) {
   return colValues;
 }
 
-function getAllColumnNames_lowerCase(sheet) {
+function getAllColumnNames(sheet) {
   // Get data of first row (where column names should be)
   var firstRow = 1;
   var firstCol = 1;
@@ -137,7 +148,7 @@ function getAllColumnNames_lowerCase(sheet) {
   var allColumnNames = [];
   
   for(var i = 0; i < firstRowDataTDArray[0].length; i++) {
-    var columnName = firstRowDataTDArray[0][i].toString().trim().toLowerCase();
+    var columnName = firstRowDataTDArray[0][i].toString().trim();
     allColumnNames.push(columnName);
   }
   return allColumnNames;
@@ -168,13 +179,13 @@ function getColumnNumberByColumnName(sheet , columnNameToSearch) {
   else {
     console.info('\nCouldn`t find column: '+columnNameToSearch+' using `range` method. Attempting to find it in all columns names of first row of sheet: '+sheet.getSheetName()+'\n');
     
-    var allColumnNames = getAllColumnNames_lowerCase(sheet);
+    var allColumnNames = getAllColumnNames(sheet);
     
     console.info('\nValues: '+firstRowDataTDArray);
     columnNameToSearch = columnNameToSearch.trim().toLowerCase();
     
     for(var i = 0; i < allColumnNames.length; i++) {
-      if(columnNameToSearch == allColumnNames[i]) {
+      if(columnNameToSearch == allColumnNames[i].toLowerCase()) {
         // Found the column - return it's index
         return i;
       } 
