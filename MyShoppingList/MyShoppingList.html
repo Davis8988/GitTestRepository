@@ -41,7 +41,7 @@
 		</form>
       </div>
       <br>
-      <div >
+      <div id="tableDiv">
         <table id="listTable" class="current-list-table">
 	      <thead>
 	      </thead>
@@ -161,12 +161,10 @@
 	}
     var listTable = $("#listTable");
 	var headers = returnedReadResult.columnNames
+	
 	populateHeaderRows(listTable,headers);
-	
 	populateDataRows(listTable , returnedReadResult);
-	
-	
-	
+	createRemoveSelectedRowsButton();
   }
   
   function validateReturnedResults(returnedReadResult) {
@@ -201,6 +199,17 @@
 	var newHead = document.createElement('thead');
 	var newRowElement = document.createElement('tr');
 	
+	// Special Case - Create Header for checkbox column:
+	var headerRowElement = document.createElement('th');
+	//headerRowElement.innerHTML = " All ";
+	var checkboxElement = document.createElement('input');
+	checkboxElement.setAttribute("type" , "checkbox");
+	checkboxElement.setAttribute("id" , "checkboxHeader");
+	checkboxElement.setAttribute("onclick" , "checkUncheckAllRowsInTable()");
+	headerRowElement.appendChild(checkboxElement);
+	newRowElement.appendChild(headerRowElement);
+	
+	
 	// Create <th> element for every column name
 	for(var i = 0 ; i < headers.length; i++) {
 		var headerRowElement = document.createElement('th');
@@ -234,6 +243,15 @@
   
   function createNewDataRowFromIndex(index , columnNames , data) {
 	var newRowElement = document.createElement('tr');
+	
+	// Create Checkbox element for the row:
+	var newDataElement = document.createElement('td');
+	var checkboxElement = document.createElement('input');
+	checkboxElement.setAttribute("type", "checkbox");
+	checkboxElement.setAttribute("class", "checkboxRow");
+	newDataElement.appendChild(checkboxElement)
+	newRowElement.appendChild(newDataElement)
+	
 	for(var j = 0 ; j < columnNames.length; j++) {
 		var newDataElement = document.createElement('td');
 		var curColumnName = columnNames[j]
@@ -252,6 +270,35 @@
     for(var key in obj) if(obj.hasOwnProperty(key)) count++;
     return count;
   }
+  
+  function createRemoveSelectedRowsButton() {
+	var tableDiv = document.getElementById('tableDiv')
+	// Create Remove Button Row:
+	var removeBtnElement = document.createElement('input');
+	removeBtnElement.setAttribute("type" , "button");
+	removeBtnElement.setAttribute("value" , " Remove Selected ");
+	tableDiv.appendChild(removeBtnElement);
+  }
+  
+  //function checkAllRowsInTable() {
+	//var listTable = $("#listTable");
+	//var tableBody = table.find('tbody');
+	//var allRows = tableBody.find('td');
+	//for(
+  //}
+  
+  function checkUncheckAllRowsInTable() {
+	//alert("yes");
+	var checkboxHeader = $('#checkboxHeader')
+	if (checkboxHeader.checked == false) {
+	  $('.checkboxRow').attr('checked', false);
+	}
+	else {
+	  $('.checkboxRow').attr('checked', true);
+	}
+  }
+  //$('#checkboxHeader').click(function () {
+  //});
   
   
 	
