@@ -114,6 +114,22 @@
 	googleSheetRequestAPI(crossDomain , requestString , method , dataType , callbackFunc);
   }
   
+  function removeData() {
+	alert('Removing Data...');
+	var crossDomain = true;
+    var method = "GET";
+    var dataType = "jsonp";
+	var rowsToRemove = getRowsToRemoveArr();
+	var action = "remove";
+	var callbackFunc = "removeCallBack";
+	
+	var requestString = "&rowsToRemove=" + rowsToRemove +
+						"&Action=" + action;
+						
+	alert(rowsToRemove)
+	//googleSheetRequestAPI(crossDomain , requestString , method , dataType , callbackFunc);
+  }
+  
   
   function insertCallBack(returnedInsertResult) {
 	var insertResult = returnedInsertResult.insertResult
@@ -205,7 +221,7 @@
 	var checkboxElement = document.createElement('input');
 	checkboxElement.setAttribute("type" , "checkbox");
 	checkboxElement.setAttribute("id" , "checkboxHeader");
-	checkboxElement.setAttribute("onclick" , "checkUncheckAllRowsInTable()");
+	checkboxElement.setAttribute("onclick" , "toggleCheckAllRowsInTable()");
 	headerRowElement.appendChild(checkboxElement);
 	newRowElement.appendChild(headerRowElement);
 	
@@ -277,30 +293,36 @@
 	var removeBtnElement = document.createElement('input');
 	removeBtnElement.setAttribute("type" , "button");
 	removeBtnElement.setAttribute("value" , " Remove Selected ");
+	removeBtnElement.setAttribute("onclick" , "removeData()");
 	tableDiv.appendChild(removeBtnElement);
   }
   
-  //function checkAllRowsInTable() {
-	//var listTable = $("#listTable");
-	//var tableBody = table.find('tbody');
-	//var allRows = tableBody.find('td');
-	//for(
-  //}
   
-  function checkUncheckAllRowsInTable() {
-	//alert("yes");
-	var checkboxHeader = $('#checkboxHeader')
-	if (checkboxHeader.checked == false) {
-	  $('.checkboxRow').attr('checked', false);
-	}
-	else {
+  function toggleCheckAllRowsInTable() {
+	// Should be only 1
+	var checkboxesHeadersArr = $('#checkboxHeader')
+	var checkboxHeader = checkboxesHeadersArr[0]
+	
+	if (checkboxHeader.checked == true) {
 	  $('.checkboxRow').attr('checked', true);
 	}
+	else {
+	  $('.checkboxRow').attr('checked', false);
+	}
   }
-  //$('#checkboxHeader').click(function () {
-  //});
   
-  
+  function getRowsToRemoveArr() {
+	var listTable = $("#listTable");
+	var dataRows = listTable.find('tbody').find('tr');	
+	var rowsToRemoveArr = []
+	//alert("dataRows = "+dataRows + "\ndataRows[0] = "+dataRows[0] + "\nLength = "+dataRows.length + "\ndataRows[0].Length = "+dataRows[0].length)
+	
+	for(var i = 0; i < dataRows.length; i++) {
+	  var rowData = dataRows[i]
+	  alert("Index["+i+"].checked = "+rowData.innerHTML)
+	}
+	
+  }
 	
 </script>
 
