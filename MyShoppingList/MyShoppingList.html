@@ -119,32 +119,44 @@
 	var crossDomain = true;
     var method = "GET";
     var dataType = "jsonp";
-	var rowsToRemove = getRowsToRemoveArr();
+	var rowsToRemoveArr = getRowsToRemoveArr();
 	var action = "remove";
 	var callbackFunc = "removeCallBack";
 	
-	var requestString = "&rowsToRemove=" + rowsToRemove +
+	var requestString = "&rowsToRemoveArr=" + rowsToRemoveArr +
 						"&Action=" + action;
 						
-	alert(rowsToRemove)
-	//googleSheetRequestAPI(crossDomain , requestString , method , dataType , callbackFunc);
+	googleSheetRequestAPI(crossDomain , requestString , method , dataType , callbackFunc);
   }
   
   
   function insertCallBack(returnedInsertResult) {
 	var insertResult = returnedInsertResult.insertResult
-	if(insertResult == false) {alert("Failed:\n"+returnedInsertResult.moreInfo) }
+	if(insertResult == true) {
+	  alert("Success:\n"+returnedInsertResult.moreInfo);
+	}
 	else {
-		alert("Success:\n"+returnedInsertResult.moreInfo);
+	  alert("Failed:\n"+returnedInsertResult.moreInfo)
 	}
 	
   }
   
   function readCallBack(returnedReadResult) {
-	if(returnedReadResult.ItemName !== null) {
+	if(returnedReadResult !== null) {
 		repopulateListTable(returnedReadResult);
 	} else {
 		alert("Error - Returned readCallBack parameter is null");
+	}
+  }
+  
+  function removeCallBack(returnedReadResult) {
+	var removeResult = returnedInsertResult.removeResult
+	if(removeResult == true) {
+	  alert("Success:\n"+returnedInsertResult.moreInfo);
+	  repopulateListTable(returnedReadResult.resultJson);
+	}
+	else {
+	  alert("Failed:\n"+returnedInsertResult.moreInfo)
 	}
   }
   
@@ -264,7 +276,7 @@
 	var newDataElement = document.createElement('td');
 	var checkboxElement = document.createElement('input');
 	checkboxElement.setAttribute("type", "checkbox");
-	checkboxElement.setAttribute("class", "checkboxRow");
+	checkboxElement.setAttribute("class", "checkboxRowClass");
 	newDataElement.appendChild(checkboxElement)
 	newRowElement.appendChild(newDataElement)
 	
@@ -288,13 +300,17 @@
   }
   
   function createRemoveSelectedRowsButton() {
-	var tableDiv = document.getElementById('tableDiv')
-	// Create Remove Button Row:
-	var removeBtnElement = document.createElement('input');
-	removeBtnElement.setAttribute("type" , "button");
-	removeBtnElement.setAttribute("value" , " Remove Selected ");
-	removeBtnElement.setAttribute("onclick" , "removeData()");
-	tableDiv.appendChild(removeBtnElement);
+	var removeRowsBtn = document.getElementById('removeRowsBtnId')
+	if(removeRowsBtn == null) {
+	  var tableDiv = document.getElementById('tableDiv')
+	  // Create Remove Button Row:
+	  var removeBtnElement = document.createElement('input');
+	  removeBtnElement.setAttribute("type" , "button");
+	  removeBtnElement.setAttribute("id" , "removeRowsBtnId");
+	  removeBtnElement.setAttribute("value" , " Remove Selected ");
+	  removeBtnElement.setAttribute("onclick" , "removeData()");
+	  tableDiv.appendChild(removeBtnElement);
+	}
   }
   
   
@@ -304,24 +320,26 @@
 	var checkboxHeader = checkboxesHeadersArr[0]
 	
 	if (checkboxHeader.checked == true) {
-	  $('.checkboxRow').attr('checked', true);
+	  $('.checkboxRowClass').attr('checked', true);
 	}
 	else {
-	  $('.checkboxRow').attr('checked', false);
+	  $('.checkboxRowClass').attr('checked', false);
 	}
   }
   
   function getRowsToRemoveArr() {
 	var listTable = $("#listTable");
-	var dataRows = listTable.find('tbody').find('tr');	
+	var checkBoxesArr = listTable.find('tbody').find('.checkboxRowClass');	
 	var rowsToRemoveArr = []
-	//alert("dataRows = "+dataRows + "\ndataRows[0] = "+dataRows[0] + "\nLength = "+dataRows.length + "\ndataRows[0].Length = "+dataRows[0].length)
 	
-	for(var i = 0; i < dataRows.length; i++) {
-	  var rowData = dataRows[i]
-	  alert("Index["+i+"].checked = "+rowData.innerHTML)
+	for(var i = checkBoxesArr.length-1; i >= 0; i--) {
+	  var checkBox = checkBoxesArr[i]
+	  if (checkBox.checked) {
+		rowsToRemoveArr.push((i+1))
+	  }
 	}
 	
+	return rowsToRemoveArr;
   }
 	
 </script>
