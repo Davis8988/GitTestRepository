@@ -1,20 +1,24 @@
 function doGet(e){
-  var op = e.parameter.Action;
+  var action = e.parameter.Action;
   var ss=SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1BwSUbhDi-FlDj34Jbmx32kZRAD2i_C5Q2cT4x5fCLGY/edit#gid=0");
   var sheet = ss.getSheetByName("ItemsList");
   
   if(op == null || ss == null || sheet == null) {return null; }
   
-  op = op.toString().trim().toLowerCase();
+  action = action.toString().trim().toLowerCase();
   
-  if(op=="insert")
+  // Check what type of the request contains: insert, read or remove
+  if(action=="insert")
     return insert_value(e,sheet);
-  else if(op=="read")
+  else if(action=="read")
     return read_data(e,sheet);
+  else if(action=="remove")
+    return remove_data(e,sheet);
 }
 
 // Insert values are fixed and must contain: ItemName, ItemQuantity, ItemPrice
 function insert_value(request,sheet){
+  console.info('Request to insert data');
   var itemName = request.parameter.ItemName;
   var itemQuantity = request.parameter.ItemQuantity;
   var itemPrice = request.parameter.ItemPrice;
@@ -27,6 +31,7 @@ function insert_value(request,sheet){
   }
   
   
+  // Check if item is already in the table:
   var itemAlreadyExists=false;
   var lastRow= sheet.getLastRow();
   for(var i=1; i <= lastRow; i++){
@@ -37,6 +42,7 @@ function insert_value(request,sheet){
      } 
   }
  
+  // If item is not already in the table - insert it
   if(itemAlreadyExists==false){
     var nowDate = new Date();
     var currentTime = nowDate.toLocaleString();
@@ -44,39 +50,47 @@ function insert_value(request,sheet){
     var result=[true , "Insertion Successful" , requestParams];
   }
  
+  // Prepare result JSON object:
   var insertResult = JSON.stringify({
     "insertResult": result[0],
     "moreInfo": result[1],
     "requestParams": result[2]
   });  
     
+  // Return the result-json-object as a PARAMETER to a callback function(was received in the request)
+  //  that will be executed once it gets back to the javascript page
   return ContentService
   .createTextOutput(request.parameter.callback + "(" + insertResult + ")")
   .setMimeType(ContentService.MimeType.JAVASCRIPT);   
   
 }
 
-
 function read_data(request,sheet){
-  console.info('got in read_data function2');
+  console.info('Request to read data');
   try {
+    // The read request must contain column names to read:
     var columnsNamesToRead = request.parameters.columnsToRead
-    if(columnsNamesToRead == null) {return null}
+    if(columnsNamesToRead == null) {
+      console.info('Error - request columnsNamesToRead parameter is null'); 
+      return null
+    }
     
-    // Must convert parameter to string via toString() to be able to use split() to get values as array
+    // Must convert parameter to string via toString() to be able to use split() to get column names values as array
     columnsNamesToRead = columnsNamesToRead.toString().trim().split(",");
-    console.info('for looping on: '+columnsNamesToRead);
+    console.info('Column names array received: '+columnsNamesToRead);
     
     
     // Special Case - wants to read all column's data
     if(columnsNamesToRead == 'all') {
+      // Get an array of all of the column names:
       columnsNamesToRead = getAllColumnNames(sheet);
     }
     
-    // Data to be returned:
+    // Prepare data from table to be returned:
+    //   read data from table according to requested column names:
     var dataArray = getColumnsDataArray(sheet , columnsNamesToRead);
     
-    // Json data to be returned:
+    // Json object to contain the data to be returned:
     var json = {};
     
     json.data = dataArray;
@@ -85,8 +99,10 @@ function read_data(request,sheet){
     
     var resultJson = JSON.stringify(json);
     
-    console.info('Finished... String JSON: '+resultJson);
+    console.info('Finished Preparing Data.\nJSON Result: '+resultJson);
     
+    // Return the result-json-object as a PARAMETER to a callback function(was received in the request)
+    //  that will be executed once it gets back to the javascript page
     return ContentService
       .createTextOutput(request.parameter.callback + "(" + resultJson + ")")
       .setMimeType(ContentService.MimeType.JAVASCRIPT); 
@@ -95,6 +111,64 @@ function read_data(request,sheet){
     // Log an ERROR message.
     console.error('read_data(request,sheet) yielded an error: ' + e);
   }
+}
+
+function remove_data(request,sheet){
+  console.info('Request to remove data');
+  try {
+    // Read remove parameters from the request
+    var rowsToRemoveParam = request.parameter.rowsToRemoveArr
+    var rowsToRemoveArr = rowsToRemoveParam.split(",")
+    console.log('Received rowsToRemoveParam='+rowsToRemoveParam.toString());
+    
+    // Loop on array of rows to remove and for each row - remove it
+    //  * rows to remove is assumed to be reversed-sorted, and contain only integers *
+    for(var i=0; i < rowsToRemoveArr.length; i++) {
+      var rowPosistion =  rowsToRemoveArr[i]
+      
+      // Convert String to Integer:
+      var rowPosistionInt = +rowPosistion
+      
+      // First row is the column headers row so decrement by 1
+      var rowCount = sheet.getLastRow()-1; 
+      
+      // Make sure doesn't delete the first column-headers row , and does not exceed the range
+      if(1 < rowPosistionInt && rowPosistionInt <= rowCount) {
+        sheet.deleteRow(rowPosistionInt);
+      } else {
+        // Throw error that will be catched later to be returned as remove-result
+        throw "Received row to remove index: "+rowPosistionInt+" is out of sheet's bounds: 1-"+rowCount;
+      }
+    }
+    var result = [true, "Remove Successful" , rowsToRemoveArr]
+    
+  } catch(e) {
+    console.log('Remove rows error'+e)
+    var result = [false] 
+    
+    // Might be an error because rowsToRemoveArr parameter was missing:
+    if(rowsToRemoveArr == null) {
+      result.push("No parameter 'rowsToRemoveArr'")
+    }
+    else {
+      result.push(e)
+    }
+    
+    result.push(null)
+  }
+  
+  // Prepare result JSON object:
+  var removeResult = JSON.stringify({
+    "removeResult": result[0],
+    "moreInfo": result[1],
+    "rowsToRemoveArr": result[2]
+  });
+  
+  console.log('Returning: '+removeResult)
+  
+  return ContentService
+  .createTextOutput(request.parameter.callback + "(" + removeResult + ")")
+  .setMimeType(ContentService.MimeType.JAVASCRIPT); 
 }
 
 function getColumnsDataArray(sheet , columnsNamesToRead) {
@@ -128,10 +202,12 @@ function getDataArrayOfOneColummn(sheet,columnName) {
   var startingCol = colNumber;
   var numOfRows = sheet.getLastRow()-1;
   
-  var colValues = sheet.getRange(startingRow,startingCol,numOfRows).getValues();
-  
-  console.info('Values: '+colValues+'\n');
-  
+  if(numOfRows > 0) { 
+    var colValues = sheet.getRange(startingRow,startingCol,numOfRows).getValues();
+    console.info('Values: '+colValues+'\n');
+  } else {
+    colValues = null;
+  }
   return colValues;
 }
 
