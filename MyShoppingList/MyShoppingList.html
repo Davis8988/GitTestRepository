@@ -36,9 +36,8 @@
     
     <div id="currentList" class="current-list">
       <div>
-		<form id="showCurrentListForm" action="javascript:readData()" >
-		  <input id="showCurrentListBtn" type="submit" value="Show List">
-		</form>
+		<input id="showHideCurrentListBtn" type="submit" value="Hide List"       onclick="javascript:showHideCurrentList()"/>
+		<input id="readDataBtn"            type="submit" value="Read From Sheet" onclick="javascript:readData()">
       </div>
       <br>
       <div id="tableDiv">
@@ -134,6 +133,11 @@
 	var insertResult = returnedInsertResult.insertResult
 	if(insertResult == true) {
 	  alert("Success:\n"+returnedInsertResult.moreInfo);
+	  
+	  var listTable = $("#listTable");
+	  var body = listTable.find('tbody');
+	  var newRowElement = createNewDataRowFromDataArr(returnedInsertResult.requestParams);
+	  body[0].appendChild(newRowElement);
 	}
 	else {
 	  alert("Failed:\n"+returnedInsertResult.moreInfo)
@@ -142,16 +146,17 @@
   }
   
   function readCallBack(returnedReadResult) {
-	if(returnedReadResult !== null) {
-		repopulateListTable(returnedReadResult);
+    var readResult = returnedReadResult.readResult
+	if(readResult == true) {
+		alert('Read Data Successful');
+		repopulateListTable(returnedReadResult.jsonObj);
 	} else {
-		alert("Error - Returned readCallBack parameter is null");
+		alert("Error Reading Data From Sheet: \nReturned result="+readResult+"\nMoreInfo="+returnedReadResult.moreInfo);
 	}
   }
   
   function removeCallBack(returnedRemoveResult) {
 	var removeResult = returnedRemoveResult.removeResult
-	alert("removeResult="+removeResult+"\ntypeof="+(typeof removeResult))
 	if(removeResult == true) {
 	  alert("Success:\n"+returnedRemoveResult.moreInfo);
 	  removeFromRowsListTable(returnedRemoveResult.rowsToRemoveArr)
@@ -159,12 +164,6 @@
 	else {
 	  alert("Failed:\n"+returnedRemoveResult.moreInfo)
 	}
-  }
-  
-  
-  function showCurrentList() {
-	toggleShowCurrentListBtnText();
-	
   }
   
   function removeFromRowsListTable(rowsToRemoveArr) {
@@ -180,7 +179,6 @@
 	  // Need to decrement by 2 because rows of google sheet start at index 0
 	  //   and first row is ignored since it's column headers row
 	  var rowToRemoveIndex = (rowsToRemoveArr[i]-2)
-	  alert("in remove rows: rowToRemoveIndex="+rowToRemoveIndex)
 	  removeOneRowFromTable(checkBoxesArr , rowToRemoveIndex) 
 	}
 	
@@ -199,15 +197,21 @@
 	
   }
   
-  function toggleShowCurrentListBtnText() {
-    var showCurrentListBtn = $("#showCurrentListBtn");
-    var currentShowListButtonText = showCurrentListBtn.val();
-	var newShowListButtonText = 'Show List';
-	if(currentShowListButtonText == 'Show List') {
-	  newShowListButtonText = 'Hide List';
+  function showHideCurrentList() {
+	var showHideCurrentListBtn = $("#showHideCurrentListBtn");
+    var currentShowHideListButtonText = showHideCurrentListBtn.val();
+	
+	var newShowHideListButtonText = 'Show List';
+	
+	// If already 'Show List' - change it
+	if(currentShowHideListButtonText == newShowHideListButtonText) {
+	  newShowHideListButtonText = 'Hide List';
+	  document.getElementById('tableDiv').removeAttribute("class");
+	} else {
+	  document.getElementById('tableDiv').setAttribute("class" , "hiddenElement");
 	}
-	alert('Current Text = '+currentShowListButtonText +'\nChanging to: '+newShowListButtonText);
-	showCurrentListBtn.val(newShowListButtonText);
+	
+	showHideCurrentListBtn.val(newShowHideListButtonText);
 	
   }
   
@@ -250,7 +254,7 @@
 	  var columnData = returnedReadResult.data[`${columnName}`]
 	  if(columnData == null) {
 	    console.log("returnedReadResult.data['"+columnName+"'] is null")
-		return [false , "returnedReadResult.data['"+columnName+"'] is null"]
+		return [false , "No values to add to table"]
 	  }
 	}
 	
@@ -311,7 +315,9 @@
 	var newBody = document.createElement('tbody');
 	
 	for(var index = 0 ; index < columnsLength; index++) {
-		var newBodyRowElement = createNewDataRowFromIndex(index , columnNames , data);
+		var dataArr = getDataArrayFromColumnNamesIndex(index , columnNames , data);
+		var newBodyRowElement = createNewDataRowFromDataArr(dataArr);
+		
 		newBody.appendChild(newBodyRowElement);
 	}
 	
@@ -319,7 +325,18 @@
 	
   }
   
-  function createNewDataRowFromIndex(index , columnNames , data) {
+  function getDataArrayFromColumnNamesIndex(index , columnNames , data) {
+	var dataArr = []
+	for(var j = 0 ; j < columnNames.length; j++) {
+		var curColumnName = columnNames[j]
+		var dataValue = data[`${curColumnName}`][index]
+		dataArr.push(dataValue);
+	}
+	return dataArr;
+  }
+  
+  
+  function createNewDataRowFromDataArr(dataArr) {
 	var newRowElement = document.createElement('tr');
 	
 	// Create Checkbox element for the row:
@@ -330,14 +347,12 @@
 	newDataElement.appendChild(checkboxElement)
 	newRowElement.appendChild(newDataElement)
 	
-	for(var j = 0 ; j < columnNames.length; j++) {
+	for(var j = 0 ; j < dataArr.length; j++) {
 		var newDataElement = document.createElement('td');
-		var curColumnName = columnNames[j]
-		var dataValue = data[`${curColumnName}`][index]
-		
+		var dataValue = dataArr[j]
 		newDataElement.innerHTML = dataValue.toString()
 		newRowElement.appendChild(newDataElement)
-	}
+	}	
 	
 	return newRowElement;
   }
@@ -382,6 +397,7 @@
 	var checkBoxesArr = listTable.find('tbody').find('.checkboxRowClass');	
 	var rowsToRemoveArr = []
 	
+	// Loop from end to start to get row indexes in reversed order
 	for(var i = checkBoxesArr.length-1; i >= 0; i--) {
 	  var checkBox = checkBoxesArr[i]
 	  if (checkBox.checked) {
@@ -431,4 +447,14 @@
   th , td {
 	border: 1px solid black;
   }
+  
+  .hiddenElement{
+	display: none;
+  }
+  
+  .showElement{
+	display: none;
+  }
+  
+  
 </style>
